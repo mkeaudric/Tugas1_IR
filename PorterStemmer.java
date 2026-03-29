@@ -1,9 +1,6 @@
 // import java.util.function.Predicate;
 
 public class PorterStemmer implements Stemmer {
-    // udah dibersihin pas di InvertedIndex, jd word gaperlu toLowerCase
-    // [C](VC)^m...[V]
-
     // m
     private int m(String word) {
         int i, m = 0, len = word.length();

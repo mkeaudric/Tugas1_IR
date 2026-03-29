@@ -1,10 +1,16 @@
-// udah ada buat ngasih docID, tokenisasi & stem, sama bikin inverted index
+// udah ada : 
+// - tokenisasi, stopword removal, stemming (porter stemmer)
+// - sama inverted index (hasilnya disimpen di JSON, Positional index ~ tiap posting isinya : docID, freq, dan offset)
+
+// list stopword dari : https://github.com/stopwords-iso/stopwords-en/blob/master/raw/snowball-tartarus.txt
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Scanner;
+import java.util.Set;
 
 public class InvertedIndex {
     // mau nyimpen docID + frekuensi + indeks kemunculan kata / offset (gaperlu offset sih tp keknya bagus dipake)
@@ -26,22 +32,38 @@ public class InvertedIndex {
         }
     }
 
-    public static void main(String[] args) {
-        // map buat docID -> path si file nya
-        // HashMap<Integer, String> docPath = new HashMap<>(); 
-        // gajadi dipake, cran pas diekstrak di corpus udah bentuk nya doc_{docID}.txt
+    // map buat term -> posting
+    // tadinya mau pake LinkedList biar kek di ppt
+    // https://stackoverflow.com/questions/10656471/performance-differences-between-arraylist-and-linkedlist
+    // tapi baca ini keknya bagusan pake ArrayList, krn keknya ga bakal insert delete segala?
+    private HashMap<String, ArrayList<Posting>> invertedIndex;
+    
+    private Stemmer ps;
+    
+    // HashSet buat stopwords, pake set biar retrieve O(1)
+    // https://stackoverflow.com/questions/30944320/java-most-efficient-structure-for-quick-retrieval
+    HashSet<String> stopWords;
 
-        // map buat term -> posting
-        // tadinya mau pake LinkedList biar kek di ppt
-        // https://stackoverflow.com/questions/10656471/performance-differences-between-arraylist-and-linkedlist
-        // tapi baca ini keknya bagusan pake ArrayList, krn keknya ga bakal insert delete segala?
-        HashMap<String, ArrayList<Posting>> invertedIndex = new HashMap<>();
-
-        Stemmer ps = new PorterStemmer();
+    public InvertedIndex(){
+        this.invertedIndex = new HashMap<>();
+        this.ps = new PorterStemmer();
+        this.stopWords  = new HashSet<>();
 
         // temp buat 3, 4
         Scanner sc = null;
         String str;
+
+        try {
+            // sc = new Scanner(new File(docPath.get(i)));
+            sc = new Scanner(new File("stopwords.txt"));
+            String sw;
+            while(sc.hasNext()) {
+                sw = sc.next().replaceAll("[\\W]|_", "").toLowerCase(); // bersihin
+                if(!sw.isEmpty()) stopWords.add(sw); 
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
 
         File dir = new File("corpus");
         File[] docList = dir.listFiles();
@@ -70,7 +92,10 @@ public class InvertedIndex {
                     // 3. bersihin & stemming
                     // https://stackoverflow.com/questions/1805518/replacing-all-non-alphanumeric-characters-with-empty-strings + lower case
                     str = sc.next().replaceAll("[\\W]|_", "").toLowerCase();
-                    if(str.isEmpty()) continue; // kalo kosong skip
+                    if(str.isEmpty() || stopWords.contains(str)) {
+                        j++; // offset tetep naik
+                        continue; 
+                    }
                     str = ps.stem(str);
 
                     // 4. masukin ke dictionary terms
@@ -98,10 +123,22 @@ public class InvertedIndex {
                 // i++;
             }
         }
+    }
+
+    public Set<String> getKeySet(){
+        return this.invertedIndex.keySet();
+    }
+
+    public ArrayList<Posting> getPostings(String key){
+        return this.invertedIndex.get(key);
+    }
+
+    public static void main(String[] args) {
+        InvertedIndex invertedIndex = new InvertedIndex();
 
         // debug (nyamain ppt)
-        for(String key : invertedIndex.keySet()){
-            ArrayList<Posting> curList = invertedIndex.get(key);
+        for(String key : invertedIndex.getKeySet()){
+            ArrayList<Posting> curList = invertedIndex.getPostings(key);
             System.out.println(key + " :");
             for(Posting post : curList){
                 System.out.print("<" + post.docID + ", " + post.freq + ": <");
@@ -112,8 +149,7 @@ public class InvertedIndex {
                 }
                 System.out.println(">;");
             }
-            System.out.println(">");
+            System.out.println();
         }
     }
-    
 }

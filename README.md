@@ -1,3 +1,3 @@
 # Mesin Pencari Sederhana
 
-## Cara menjalankan
+### Cara menjalankan
