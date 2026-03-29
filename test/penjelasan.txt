@@ -1,0 +1,11 @@
+cran.qry: daftar kueri
+cranqrel: kunci jawaban (queryID, docID, tingkat relevansi)
+
+test buat ngetes pake jumlah doc kecil
+corpus isinya doc_1 - doc_100
+
+buat tes :
+cranqrel100 : cranqrel yg udah difilter buat doc_1 - doc_100
+
+jadi kl buat retrieve bisa dinilai dari cranqrel100, pake kalimat yang ada
+di cran.qry, terus liat docID yang diretrieve. Ngurutinnya pake tingkat releavnsi
