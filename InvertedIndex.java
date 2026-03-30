@@ -1,6 +1,6 @@
 // udah ada : 
 // - tokenisasi, stopword removal, stemming (porter stemmer)
-// - sama inverted index (hasilnya disimpen di JSON, Positional index ~ tiap posting isinya : docID, freq, dan offset)
+// - inverted index (hasil outputnya ga disimpen jd harus dijalanin berulang kali)
 
 // list stopword dari : https://github.com/stopwords-iso/stopwords-en/blob/master/raw/snowball-tartarus.txt
 
@@ -133,23 +133,23 @@ public class InvertedIndex {
         return this.invertedIndex.get(key);
     }
 
-    public static void main(String[] args) {
-        InvertedIndex invertedIndex = new InvertedIndex();
+    // public static void main(String[] args) {
+    //     InvertedIndex invertedIndex = new InvertedIndex();
 
-        // debug (nyamain ppt)
-        for(String key : invertedIndex.getKeySet()){
-            ArrayList<Posting> curList = invertedIndex.getPostings(key);
-            System.out.println(key + " :");
-            for(Posting post : curList){
-                System.out.print("<" + post.docID + ", " + post.freq + ": <");
-                int i = 0;
-                for(Integer o : post.offset){
-                    System.out.print(o);
-                    if(i++ < post.freq - 1) System.out.print(", "); 
-                }
-                System.out.println(">;");
-            }
-            System.out.println();
-        }
-    }
+    //     // debug (nyamain ppt)
+    //     for(String key : invertedIndex.getKeySet()){
+    //         ArrayList<Posting> curList = invertedIndex.getPostings(key);
+    //         System.out.println(key + " :");
+    //         for(Posting post : curList){
+    //             System.out.print("<" + post.docID + ", " + post.freq + ": <");
+    //             int i = 0;
+    //             for(Integer o : post.offset){
+    //                 System.out.print(o);
+    //                 if(i++ < post.freq - 1) System.out.print(", "); 
+    //             }
+    //             System.out.println(">;");
+    //         }
+    //         System.out.println();
+    //     }
+    // }
 }
