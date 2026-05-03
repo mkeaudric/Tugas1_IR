@@ -4,8 +4,11 @@
 
 // list stopword dari : https://github.com/stopwords-iso/stopwords-en/blob/master/raw/snowball-tartarus.txt
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,7 +18,7 @@ import java.util.Set;
 public class InvertedIndex {
     // mau nyimpen docID + frekuensi + indeks kemunculan kata / offset (gaperlu offset sih tp keknya bagus dipake)
     // ppt 3 bagian Positional Index
-    private static class Posting {
+    public static class Posting {
         int docID;
         int freq;
         ArrayList<Integer> offset;
@@ -129,9 +132,52 @@ public class InvertedIndex {
         return this.invertedIndex.keySet();
     }
 
-    public ArrayList<Posting> getPostings(String key){
+    public ArrayList<Posting> getPostings(String key) {
         return this.invertedIndex.get(key);
     }
+    
+    // Sorry ya gua tambah ini buat bisa nampilin judul di outputnya 
+    // Buat hashmap berisi docTitles untuk menyimpan judul dokumen
+    // https://stackoverflow.com/questions/4716503/reading-a-plain-text-file-in-java
+    public HashMap<Integer, String> docTitles = new HashMap<>();
+
+    public void loadTitles(String filePath) {
+        // Baca file dari cran.all.1400 untuk bisa me-retrieve judul berdasarkan docID
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            int currentID = -1;
+            boolean isTitle = false;
+            StringBuilder titleBuilder = new StringBuilder();
+
+            while ((line = br.readLine()) != null) {
+                if (line.startsWith(".I")) {
+                    // Simpan judul sebelumnya jika ada
+                    if (currentID != -1) {
+                        docTitles.put(currentID, titleBuilder.toString().trim());
+                    }
+                    // Reset untuk dokumen baru
+                    currentID = Integer.parseInt(line.substring(3).trim());
+                    titleBuilder = new StringBuilder();
+                    isTitle = false;
+                } else if (line.startsWith(".T")) {
+                    isTitle = true;
+                } else if (line.startsWith(".A") || line.startsWith(".B") || line.startsWith(".W")) {
+                    isTitle = false;
+                } else if (isTitle) {
+                    // Tambahin baris teks ke judul (karena judul bisa lebih dari 1 baris)
+                    titleBuilder.append(line).append(" ");
+                }
+            }
+            // Put dokumen terakhir
+            if (currentID != -1) {
+                docTitles.put(currentID, titleBuilder.toString().trim());
+            }
+        } catch (IOException e) {
+            System.out.println("Error reading titles: " + e.getMessage());
+        }
+    }
+
+
 
     // public static void main(String[] args) {
     //     InvertedIndex invertedIndex = new InvertedIndex();

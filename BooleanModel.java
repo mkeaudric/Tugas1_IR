@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 
 public class BooleanModel {
-    public ArrayList<InvertedIndex.Posting> andOpt(
+    public static ArrayList<InvertedIndex.Posting> andOpt(
         ArrayList<InvertedIndex.Posting> list1, 
         ArrayList<InvertedIndex.Posting> list2){
         
@@ -10,6 +10,10 @@ public class BooleanModel {
         if (list1 == null || list2 == null || list1.isEmpty() || list2.isEmpty()) {
             return result;
         }
+
+        // Tambahkan sorting berdasarkan DocID biar ga ada duplikasi dan biar size dari result ga lebih besar dari kedua list 
+        list1.sort((p1, p2) -> Integer.compare(p1.docID, p2.docID));
+        list2.sort((p1, p2) -> Integer.compare(p1.docID, p2.docID));
 
         int i = 0, j = 0;
         while (i < list1.size() && j < list2.size()) {
@@ -42,6 +46,9 @@ public class BooleanModel {
             return new ArrayList<>(list1);
         }
 
+        list1.sort((p1, p2) -> Integer.compare(p1.docID, p2.docID));
+        list2.sort((p1, p2) -> Integer.compare(p1.docID, p2.docID));
+
         int i = 0, j = 0;
         while (i < list1.size() && j < list2.size()) {
             InvertedIndex.Posting posting1 = list1.get(i);
@@ -73,8 +80,8 @@ public class BooleanModel {
 
     public ArrayList<InvertedIndex.Posting> notOpt(
         ArrayList<InvertedIndex.Posting> list1, 
-        ArrayList<InvertedIndex.Posting> list2){
-        
+        ArrayList<InvertedIndex.Posting> list2) {
+
         ArrayList<InvertedIndex.Posting> result = new ArrayList<>();
 
         if (list1 == null || list1.isEmpty()) {
@@ -83,6 +90,9 @@ public class BooleanModel {
         if (list2 == null || list2.isEmpty()) {
             return new ArrayList<>(list1);
         }
+
+        list1.sort((p1, p2) -> Integer.compare(p1.docID, p2.docID));
+        list2.sort((p1, p2) -> Integer.compare(p1.docID, p2.docID));
 
         int i = 0, j = 0;
         while (i < list1.size() && j < list2.size()) {
