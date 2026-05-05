@@ -51,28 +51,32 @@ public class QueryEvaluator {
                 }
                 operatorStack.push(upperToken);
             } else if (token.equals("(")) {
-                operatorStack.push("(");
-            } else if (token.equals(")")) {
-                // Keluarkan semua operator sampai ketemu kurung buka
                 while (!operatorStack.isEmpty() && !operatorStack.peek().equals("(")) {
                     postfix.add(operatorStack.pop());
                 }
                 if (!operatorStack.isEmpty()) {
-                    operatorStack.pop(); // Buang kurung buka "("
+                    operatorStack.pop(); 
                 }
+            } else if (token.equals(")")) {
+                operatorStack.push("(");
             } else {
-                // https://stackoverflow.com/questions/1805518/replacing-all-non-alphanumeric-characters-with-empty-strings + lower case
-                // Bersihkan token dari karakter non-alphanumeric tanda baca atau simbol dan ubah ke lower case
-                String str = token.replaceAll("[\\W]|_", "").toLowerCase();
-                
-                // Cek apakah term sudah ada di vocabulary, jika tidak, cari yang paling mirip dengan edit distance
-                if (!str.isEmpty()) {
-                    // Cari term paling mirip
-                    String cleanedTerm = engine.getCorrectedTerm(str);
+                // ini gw ubah
+                String[] subTokens = token.split("[\\W_]+");
+                int termCt = 0;
 
-                    // Stem term yang sudah bersih dan masukkan ke postfix
-                    String stemmedTerm = stemmer.stem(cleanedTerm);
-                    postfix.add(stemmedTerm);
+                for (String sub : subTokens) {
+                    if (sub.isEmpty()) continue;
+                    String lowerSub = sub.toLowerCase();
+                    if (index.stopWords.contains(lowerSub)) continue;
+
+                    // stemmingnya sebelum spelling correction
+                    String stemmedTerm = stemmer.stem(lowerSub);
+                    String finalTerm = engine.getCorrectedTerm(stemmedTerm);
+                    postfix.add(finalTerm);
+                    termCt++;
+
+                    // masukin AND kalo token jd kepisah
+                    if (termCt > 1) postfix.add("AND");
                 }
             }
         }

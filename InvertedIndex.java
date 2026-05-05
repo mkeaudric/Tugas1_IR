@@ -86,6 +86,7 @@ public class InvertedIndex {
                 try {
                     // sc = new Scanner(new File(docPath.get(i)));
                     sc = new Scanner(doc);
+                    sc.useDelimiter("[\\W_]+");
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                 }
