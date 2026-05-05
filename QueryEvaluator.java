@@ -25,6 +25,9 @@ public class QueryEvaluator {
         List<String> postfix = new ArrayList<>();
         Stack<String> operatorStack = new Stack<>();
 
+        // Ganti "AND NOT" dengan "NOT" untuk menyederhanakan parsing
+        query = query.replaceAll("(?i)\\bAND\\s+NOT\\b", "NOT"); 
+
         // Pre-processing: Beri spasi pada tanda kurung agar mudah di-split
         query = query.replace("(", " ( ").replace(")", " ) ");
         //https://stackoverflow.com/questions/15625629/regex-expressions-in-java-s-vs-s
@@ -32,6 +35,10 @@ public class QueryEvaluator {
 
 
         //https://www-geeksforgeeks-org.translate.goog/java/java-program-to-implement-shunting-yard-algorithm/?_x_tr_sl=en&_x_tr_tl=id&_x_tr_hl=id&_x_tr_pto=tc&_x_tr_hist=true
+        //Priority () > NOT > AND > OR
+        //Proses secara sederhana jika term maka akan dimasukkan pada list postfix, jika operator maka akan dimasukkan ke stack operator
+        //operator akan masuk kedalam list postfix jika operator baru yang masuk memiliki prioritas lebih rendah atau sama dengan operator
+        // yang ada di stack, atau jika operator baru adalah tanda kurung tutup ")"
         for (String token : tokens) {
             if (token.isEmpty()) continue;
 
@@ -55,6 +62,7 @@ public class QueryEvaluator {
                 }
             } else {
                 // https://stackoverflow.com/questions/1805518/replacing-all-non-alphanumeric-characters-with-empty-strings + lower case
+                // Bersihkan token dari karakter non-alphanumeric tanda baca atau simbol dan ubah ke lower case
                 String str = token.replaceAll("[\\W]|_", "").toLowerCase();
                 
                 // Cek apakah term sudah ada di vocabulary, jika tidak, cari yang paling mirip dengan edit distance
@@ -70,6 +78,7 @@ public class QueryEvaluator {
         }
 
         // Habiskan sisa operator di stack
+        // masukkan ke list postfix jika masih ada operator yang tersisa di stack
         while (!operatorStack.isEmpty()) {
             postfix.add(operatorStack.pop());
         }
@@ -121,6 +130,8 @@ public class QueryEvaluator {
                 // kita standarisasi menjadi ArrayList kosong agar aman dari NullPointerException
                 if (postings == null) {
                     postings = new ArrayList<>();
+                }else{
+                    postings.sort((p1, p2) -> Integer.compare(p1.docID, p2.docID));
                 }
 
                 resultStack.push(postings);
@@ -128,7 +139,10 @@ public class QueryEvaluator {
         }
 
         // Hasil akhir adalah satu-satunya list yang tersisa di dalam stack
-        return resultStack.isEmpty() ? new ArrayList<>() : resultStack.pop();
+        ArrayList<InvertedIndex.Posting> finalResult = resultStack.isEmpty() ? new ArrayList<>() : resultStack.pop();
+        finalResult.sort((p1, p2) -> Integer.compare(p1.docID, p2.docID));
+        
+        return finalResult;
     }
     
     // Untuk baca kunci jawaban dari file cranqrel100.txt 
