@@ -1,66 +1,79 @@
 import java.util.ArrayList;
+import java.util.Scanner;
 
 public class SearchEngine {
-    private InvertedIndex index;
-    private EditDistance levenshtein;
+    public static void main(String[] args) {
+        // 1. Bangun Inverted Index (Proses Indexing) dan load dokumen
+        printHeader();
 
-    public SearchEngine(InvertedIndex index) {
-        this.index = index;
-        this.levenshtein = new EditDistance();
-    }
-    
-    public ArrayList<InvertedIndex.Posting> search(String query) {
-        // 1. Lakukan tokenisasi query - ubah query menjadi lowercase dan split berdasarkan spasi
-        String[] terms = query.toLowerCase().split("\\s+");
+        System.out.println(" [Status] Ready! Please enter your boolean query below.");
+        System.out.println("==========================================================");
 
-        // 2. Bersikan kata (term)
-        // Buat arrayList untuk menyimpan term yang sudah dibersihkan
-        ArrayList<String> cleanedTerms = new ArrayList<>();
-        // untuk setiap term, periksa apakah ada di vocabulary
-        // Jika tidak ada di vocabulary, cari term yang paling mirip dengan menggunakan edit distance 
-        for (String term : terms) {
-            if (!index.getKeySet().contains(term)) {
-                String suggestion = levenshtein.findClosestTerm(term, index.getKeySet());
-                cleanedTerms.add(suggestion);
-                // Kalo ada di vocabulary, langsung maskukin ke cleanedTerms
-            } else {
-                cleanedTerms.add(term);
-            }
+        // 2. Siapkan index, Boolean Model, evaluaror, dan Search Engine
+        InvertedIndex index = new InvertedIndex();
+        BooleanModel bm = new BooleanModel();
+        EditDistance levenshtein = new EditDistance();
+        QueryEvaluator evaluator = new QueryEvaluator(index, bm, levenshtein);
+
+        // 3. Input Query
+        Scanner input = new Scanner(System.in);
+        System.out.print("\nInput your Query: ");
+        String userQuery = input.nextLine();
+
+        // 4. Eksekusi Pencarian
+        // QueryEvaluator akan melakukan tokenisasi, stemming, dan boolean logic
+        ArrayList<InvertedIndex.Posting> results = evaluator.evaluate(userQuery);
+
+        if (results != null && !results.isEmpty()) {
+            results.sort((p1, p2) -> Integer.compare(p2.docID, p1.docID));
+        } else {
+            System.out.println("No documents found.");
         }
         
-        // 3. proses query dengan boolean model (AND) buat ngegabungin semua term yang udah dibersihin
-        ArrayList<InvertedIndex.Posting> finalResults = queryProcess(cleanedTerms);
+        // 5. Tampilkan Hasil
+        displayResults(results);
+
+        input.close();
+
+        // Kalo mau ngetest precision and recall, pake ini buat load ground truth dari file cranqrel100.txt
+        // HashMap<Integer, HashSet<Integer>> groundTruth = evaluator.loadGroundTruth("test/cranqrel100.txt");
+
+        // Gunakan ini jika ingin evaluasi model (presisi, recall) berdasarkan ID query
+        // System.out.print("\nMasukkan ID Query untuk evaluasi (misal: 1): ");
+        // if (input.hasNextInt()) {
+        //     int qID = input.nextInt();
+        //     // Panggil fungsi hitung metrik di evaluator
+        //     evaluator.calculateMetrics(qID, results, groundTruth);
+        // }
+    }   
     
-        return finalResults;
+    private static void displayResults(ArrayList<InvertedIndex.Posting> results) {
+        InvertedIndex index = new InvertedIndex();
+        index.loadTitles("cran/cran.all.1400");
+
+        if (results == null || results.isEmpty()) {
+            return;
+        }
+
+        System.out.println("\nFound " + results.size() + " document(s):");
+        System.out.println("--------------------------------------------------------------------------------");
+        System.out.printf("%-7s | %-5s | %s\n", "DOC ID", "FREQ", "TITLE");
+        System.out.println("--------------------------------------------------------------------------------");
+
+        for (InvertedIndex.Posting p : results) {
+            // Ambil judul dari dokumen asli berdasarkan ID
+            String title = index.docTitles.getOrDefault(p.docID, "No Title"); 
+            System.out.printf("[%03d]   |  %-4d | %s\n", p.docID, p.freq, title);
+        }
+        System.out.println("--------------------------------------------------------------------------------");
     }
-
-    public ArrayList<InvertedIndex.Posting> queryProcess(ArrayList<String> cleanedTerms) {
-        if (cleanedTerms.isEmpty()) {
-            return new ArrayList<>();
-        }
-        
-        // 1. Ambil kata pertama dari cleandTerms
-        String firstTerm = cleanedTerms.get(0);
-        ArrayList<InvertedIndex.Posting> resultTemp = index.getPostings(firstTerm);
-
-        // 2. Jika ada kata lagi, maka gabungkan dengan boolean model 
-        for (int i = 1; i < cleanedTerms.size(); i++) {
-            String nextTerm = cleanedTerms.get(i);
-
-            // Ambil posting list berikutnya 
-            ArrayList<InvertedIndex.Posting> nextPostings = index.getPostings(nextTerm);
-
-            // Gabungkan resultTemp dengan nextPostings menggunakan boolean model (AND)
-            resultTemp = BooleanModel.andOpt(resultTemp, nextPostings);
-        }
-        return resultTemp;
-    }
-
-    public String getCorrectedTerm(String term) {
-        // Pakai logika yang sama dengan yang ada di loop search kamu
-        if (!index.getKeySet().contains(term)) {
-            return levenshtein.findClosestTerm(term, index.getKeySet());
-        }
-        return term;
+    
+    private static void printHeader() {
+        System.out.println("==========================================================");
+        System.out.println("           Simple Document Search Engine (IR)           ");
+        System.out.println("==========================================================");
+        System.out.println(" [System] Initializing Inverted Index...                ");
+        System.out.println(" [System] Loading Documents...                          ");
+        System.out.println("----------------------------------------------------------");
     }
 }

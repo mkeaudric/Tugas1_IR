@@ -59,10 +59,11 @@ public class EditDistance {
             }
         }
 
-        if (minDistance > 2) {
+        if (minDistance > 3) {
             return term; // Jarak terlalu jauh, mungkin emang kata baru
         }
 
+        // Balikin hasil kata yang distancenya paling kecil (paling mirip)
         return bestTerm;
     }
     
