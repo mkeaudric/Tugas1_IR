@@ -29,7 +29,7 @@ public class InvertedIndex {
             offset = new ArrayList<Integer>();
         }
 
-        void addTerm(int idx){
+        void addTerm(int idx) {
             offset.add(idx);
             freq++;
         }
@@ -70,11 +70,11 @@ public class InvertedIndex {
 
         File dir = new File("corpus");
         File[] docList = dir.listFiles();
-        if(docList != null){
+        if (docList != null) {
             // int i = 0;
             // loop file corpus : https://stackoverflow.com/questions/4917326/how-to-iterate-over-the-files-of-a-certain-directory-in-java
             // gw pikir biar efisien loop tiap dokumen, tokenisasi + stemming, lgs catet si freq & indeks kemunculan lalu masukin ke map
-            for(File doc : docList){
+            for (File doc : docList) {
                 // 1. ambil docID
                 // docPath.putIfAbsent(i, doc.getAbsolutePath());
                 String fileName = doc.getName();
@@ -92,29 +92,29 @@ public class InvertedIndex {
                 }
 
                 int j = 0; // buat offset kemunculan term
-                while(sc.hasNext()){
+                while (sc.hasNext()) {
                     // 3. bersihin & stemming
                     // https://stackoverflow.com/questions/1805518/replacing-all-non-alphanumeric-characters-with-empty-strings + lower case
                     str = sc.next().replaceAll("[\\W]|_", "").toLowerCase();
-                    if(str.isEmpty() || stopWords.contains(str)) {
+                    if (str.isEmpty() || stopWords.contains(str)) {
                         j++; // offset tetep naik
-                        continue; 
+                        continue;
                     }
                     str = ps.stem(str);
 
                     // 4. masukin ke dictionary terms
-                    if(invertedIndex.get(str) == null){ // kalo term baru
+                    if (invertedIndex.get(str) == null) { // kalo term baru
                         ArrayList<Posting> newList = new ArrayList<>(); // list baru
                         Posting newPosting = new Posting(docID); // posting (doc i) baru
                         newPosting.addTerm(j); // tambahin term (freq otomatis ++)
                         newList.add(newPosting);
                         invertedIndex.put(str, newList);
-                    } else{
+                    } else {
                         ArrayList<Posting> curList = invertedIndex.get(str);
                         Posting lastPosting = curList.get(curList.size() - 1); // posting terakhir
 
                         // kalo lastPosting itu doc skrg (doc i)
-                        if(lastPosting.docID == docID){
+                        if (lastPosting.docID == docID) {
                             lastPosting.addTerm(j); // tgl tambahain offset
                         } else { // kalo bukan doc skrg
                             Posting newPosting = new Posting(docID);
