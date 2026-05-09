@@ -24,8 +24,6 @@ public class QueryEvaluator {
         List<String> postfix = new ArrayList<>();
         Stack<String> operatorStack = new Stack<>();
 
-        // Ganti "AND NOT" dengan "NOT" untuk menyederhanakan parsing
-        query = query.replaceAll("(?i)\\bAND\\s+NOT\\b", "NOT"); 
         // Pre-processing: Beri spasi pada tanda kurung agar mudah di-split
         query = query.replace("(", " ( ").replace(")", " ) ");
         //https://stackoverflow.com/questions/15625629/regex-expressions-in-java-s-vs-s
@@ -70,11 +68,12 @@ public class QueryEvaluator {
                 // Syarat menyisipkan AND:
                 // 1. Token SEBELUMNYA adalah Term atau ")"
                 boolean isPrevTermOrCloseParen = !prev.equals("AND") && !prev.equals("OR") && !prev.equals("NOT") && !prev.equals("(");
-                // 2. Token SAAT INI adalah Term atau "("
-                boolean isCurrTermOrOpenParen = !current.equals("AND") && !current.equals("OR") && !current.equals("NOT") && !current.equals(")");
+                
+                // 2. Token SAAT INI adalah Term, "(", ATAU "NOT" (Ini diubah agar mengizinkan NOT)
+                boolean isCurrTermOrOpenParenOrNot = !current.equals("AND") && !current.equals("OR") && !current.equals(")");
 
-                // Jika kedua syarat terpenuhi (ada dua term berjejer), sisipkan "AND"
-                if (isPrevTermOrCloseParen && isCurrTermOrOpenParen) {
+                // Jika kedua syarat terpenuhi, sisipkan "AND"
+                if (isPrevTermOrCloseParen && isCurrTermOrOpenParenOrNot) {
                     processedTokens.add("AND");
                 }
             }
@@ -96,11 +95,12 @@ public class QueryEvaluator {
                 while (!operatorStack.isEmpty() && !operatorStack.peek().equals("(")) {
                     postfix.add(operatorStack.pop());
                 }
-                if (!operatorStack.isEmpty()) operatorStack.pop(); // Buang "("
+                if (!operatorStack.isEmpty()) {
+                    operatorStack.pop();
+                }
             } else if (token.equals("(")) {
                 operatorStack.push("(");
             } else {
-                // Token berupa Term langsung masuk ke postfix
                 postfix.add(token);
             }
         }
@@ -111,7 +111,6 @@ public class QueryEvaluator {
         }
 
         return postfix;
-
     }
     
     // Menentukan prioriti operasi Boolean
@@ -124,32 +123,58 @@ public class QueryEvaluator {
         }
     }
 
+    // Helper untuk mendapatkan seluruh dokumen di corpus (Universal Set)
+    private ArrayList<InvertedIndex.Posting> getAllDocuments() {
+        HashSet<Integer> uniqueDocs = new HashSet<>();
+        
+        // Kumpulkan semua docID unik dari seluruh terms yang ada di Inverted Index
+        for (String term : index.getKeySet()) {
+            ArrayList<InvertedIndex.Posting> postings = index.getPostings(term);
+            if (postings != null) {
+                for (InvertedIndex.Posting p : postings) {
+                    uniqueDocs.add(p.docID);
+                }
+            }
+        }
+
+        // Ubah kembali menjadi format ArrayList<Posting> agar sesuai dengan BooleanModel
+        ArrayList<InvertedIndex.Posting> allDocs = new ArrayList<>();
+        for (Integer id : uniqueDocs) {
+            allDocs.add(new InvertedIndex.Posting(id));
+        }
+        
+        // Pastikan terurut (Sorting sangat penting untuk fungsi andOpt/orOpt/notOpt Anda)
+        allDocs.sort((p1, p2) -> Integer.compare(p1.docID, p2.docID));
+        return allDocs;
+    }
+
     public ArrayList<InvertedIndex.Posting> evaluate(String query) {
         List<String> postfix = infixToPostfix(query);
         Stack<ArrayList<InvertedIndex.Posting>> resultStack = new Stack<>();
 
         for (String token : postfix) {
             if (token.equals("AND") || token.equals("OR") || token.equals("NOT")) {
-                // Pop 2 posting list terakhir untuk dievaluasi
-                // Urutan pop: yang pertama di-pop adalah operand KANAN
-                ArrayList<InvertedIndex.Posting> rightOperand = resultStack.isEmpty() ? new ArrayList<>()
-                        : resultStack.pop();
-                ArrayList<InvertedIndex.Posting> leftOperand = resultStack.isEmpty() ? new ArrayList<>()
-                        : resultStack.pop();
-
-                ArrayList<InvertedIndex.Posting> tempResult = new ArrayList<>();
-
-                if (token.equals("AND")) {
-                    tempResult = BooleanModel.andOpt(leftOperand, rightOperand);
-                } else if (token.equals("OR")) {
-                    tempResult = BooleanModel.orOpt(leftOperand, rightOperand);
-                } else if (token.equals("NOT")) {
-                    tempResult = BooleanModel.notOpt(leftOperand, rightOperand);
-                    // System.out.println("Pushing to stack, size: " + tempResult.size());
+                if (token.equals("NOT")) {
+                    // Hanya pop 1 kali untuk operand kanan
+                    ArrayList<InvertedIndex.Posting> rightOperand = resultStack.isEmpty() ? new ArrayList<>() : resultStack.pop();
+                    
+                    // Lakukan operasi: Seluruh Dokumen (Universal Set) - Operand Kanan
+                    ArrayList<InvertedIndex.Posting> allDocs = getAllDocuments();
+                    resultStack.push(BooleanModel.notOpt(allDocs, rightOperand));
+                }else {
+                    // AND dan OR MEMBUTUHKAN DUA OPERAND (BINARY)
+                    // Pop 2 posting list terakhir untuk dievaluasi
+                    // Urutan pop: yang pertama di-pop adalah operand KANAN
+                    ArrayList<InvertedIndex.Posting> rightOperand = resultStack.isEmpty() ? new ArrayList<>() : resultStack.pop();
+                    ArrayList<InvertedIndex.Posting> leftOperand = resultStack.isEmpty() ? new ArrayList<>() : resultStack.pop();
+                    
+                    if (token.equals("AND")) {
+                        resultStack.push(BooleanModel.andOpt(leftOperand, rightOperand));
+                    } else if (token.equals("OR")) {
+                        resultStack.push(BooleanModel.orOpt(leftOperand, rightOperand));
+                    }
                 }
-
-                // Push kembali hasil evaluasi ke dalam stack
-                resultStack.push(tempResult);
+                
             } else {
                 // Jika token adalah TERM (kata), ambil Posting List-nya dari Inverted Index
                 ArrayList<InvertedIndex.Posting> postings = index.getPostings(token);
