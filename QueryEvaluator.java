@@ -158,12 +158,10 @@ public class QueryEvaluator {
                 // kita standarisasi menjadi ArrayList kosong agar aman dari NullPointerException
                 if (postings == null) {
                     postings = new ArrayList<>();
+                }else{
+                    // Pastikan posting list terurut berdasarkan docID untuk operasi Boolean yang efisien
+                    postings.sort((p1, p2) -> Integer.compare(p1.docID, p2.docID));
                 }
-                // }else{
-                //     // postings.sort((p1, p2) -> Integer.compare(p1.docID, p2.docID));
-                //     // postings.sort((p1, p2) -> Integer.compare(p2.freq, p1.freq));
-                // }
-
                 resultStack.push(postings);
             }
         }
