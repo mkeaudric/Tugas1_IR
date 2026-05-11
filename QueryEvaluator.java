@@ -53,6 +53,8 @@ public class QueryEvaluator {
                     String stemmedTerm = stemmer.stem(lowerSub);
                     String finalTerm = levenshtein.findClosestTerm(stemmedTerm, index.getKeySet());
                     cleanTokens.add(finalTerm);
+
+                    System.out.println(finalTerm);
                 }
             }
         }
