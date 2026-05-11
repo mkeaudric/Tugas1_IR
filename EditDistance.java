@@ -30,9 +30,9 @@ public class EditDistance {
                 
                 // Kalo beda, pilih biaya minimum dari 3 operasi
                 else {
-                    dp[i][j] = 1 + Math.min(dp[i][j - 1],      // Insertion
-                            Math.min(dp[i - 1][j],          // Deletion
-                            dp[i - 1][j - 1]));    // Substitution
+                    dp[i][j] = 1 + Math.min(dp[i][j - 1], // Insertion
+                            Math.min(dp[i - 1][j],        // Deletion
+                            dp[i - 1][j - 1]));           // Substitution
                 }
             }
         }

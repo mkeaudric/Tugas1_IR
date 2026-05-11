@@ -78,9 +78,13 @@ public class QueryEvaluator {
                     postfix.add(finalTerm);
                     termCt++;
 
+                    System.out.println(finalTerm);
+                    
                     // masukin AND kalo token jd kepisah
                     if (termCt > 1)
                         postfix.add("AND");
+
+                    System.out.println(postfix);
                 }
             }
         }

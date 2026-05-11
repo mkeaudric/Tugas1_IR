@@ -20,6 +20,8 @@ public class SearchEngine {
         System.out.print("\nInput your Query: ");
         String userQuery = input.nextLine();
 
+        System.out.println("\nShowing results for: ");
+
         // 4. Eksekusi Pencarian
         // QueryEvaluator akan melakukan tokenisasi, stemming, dan boolean logic
         ArrayList<InvertedIndex.Posting> results = evaluator.evaluate(userQuery);
