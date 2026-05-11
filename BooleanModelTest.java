@@ -1,117 +1,121 @@
 import java.util.ArrayList;
+import java.util.HashSet;
 
+/*
+ * Catatan:
+ * - Nilai Harapan Program di setiap test case disesuaikan dengan dataset yang diberikan (doc_1.txt s/d doc_10.txt) Bukan keseluruhan corpus!
+ */
 public class BooleanModelTest {
 
-    // Helper: Fungsi untuk membuat dummy list dokumen (Posting) dengan cepat
-    public static ArrayList<InvertedIndex.Posting> createPostingList(int... docIDs) {
-        ArrayList<InvertedIndex.Posting> list = new ArrayList<>();
-        for (int id : docIDs) {
-            // Memastikan data terurut karena list harus sorted untuk algoritma two-pointer
-            list.add(new InvertedIndex.Posting(id));
-        }
-        return list;
-    }
-
-    // Helper: Fungsi untuk mencetak isi list ke terminal
-    public static void printResult(String testName, ArrayList<InvertedIndex.Posting> result) {
-        System.out.print(testName + " \n↳ Hasil Program: [");
-        for (int i = 0; i < result.size(); i++) {
-            System.out.print(result.get(i).docID);
-            if (i < result.size() - 1) System.out.print(", ");
+    // Helper: Mencetak isi list ke terminal dan membandingkan dengan harapan
+    public static void printResult(String kueri, String harapan, ArrayList<InvertedIndex.Posting> result) {
+        System.out.println("Kueri: " + kueri);
+        System.out.println("↳ Harapan Program: " + harapan);
+        System.out.print("↳ Hasil Eksekusi : [");
+        if (result != null) {
+            for (int i = 0; i < result.size(); i++) {
+                System.out.print(result.get(i).docID);
+                if (i < result.size() - 1)
+                    System.out.print(", ");
+            }
         }
         System.out.println("]\n");
     }
 
-    public static void main(String[] args) {
-        System.out.println("=== MEMULAI PENGUJIAN BOOLEAN MODEL (UPDATE UNARY NOT) ===\n");
+    // Helper untuk memastikan data yang diambil dari Index aman dan TERURUT
+    private static ArrayList<InvertedIndex.Posting> getSortedPostings(InvertedIndex index, String term) {
+        ArrayList<InvertedIndex.Posting> raw = index.getPostings(term);
+        if (raw == null) {
+            return new ArrayList<>();
+        }
+        // Buat salinan agar index asli tidak berubah
+        ArrayList<InvertedIndex.Posting> sorted = new ArrayList<>(raw);
+        // Wajib diurutkan untuk BooleanModel
+        sorted.sort((p1, p2) -> Integer.compare(p1.docID, p2.docID));
+        return sorted;
+    }
 
-        // 1. SIAPKAN DATA DUMMY
-        // Asumsikan total dokumen di korpus kita ada 10 (docID 1 sampai 10)
-        ArrayList<InvertedIndex.Posting> allDocs = createPostingList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
-        
-        // Data Term
-        ArrayList<InvertedIndex.Posting> flow = createPostingList(2, 3, 4, 6, 7, 9);
-        ArrayList<InvertedIndex.Posting> boundary = createPostingList(2, 3, 4, 7, 8, 9);
-        ArrayList<InvertedIndex.Posting> heat = createPostingList(5, 6);
-        ArrayList<InvertedIndex.Posting> mach = createPostingList(7, 9, 10);
-        
+    // Helper: Mengambil seluruh dokumen (Universal Set) secara dinamis dari
+    // Inverted Index
+    private static ArrayList<InvertedIndex.Posting> getAllDocuments(InvertedIndex index) {
+        HashSet<Integer> uniqueDocs = new HashSet<>();
+        for (String term : index.getKeySet()) {
+            ArrayList<InvertedIndex.Posting> postings = index.getPostings(term);
+            if (postings != null) {
+                for (InvertedIndex.Posting p : postings) {
+                    uniqueDocs.add(p.docID);
+                }
+            }
+        }
+        ArrayList<InvertedIndex.Posting> allDocs = new ArrayList<>();
+        for (Integer id : uniqueDocs) {
+            allDocs.add(new InvertedIndex.Posting(id));
+        }
+        // Wajib disortir ( Algoritma Two-Pointer )
+        allDocs.sort((p1, p2) -> Integer.compare(p1.docID, p2.docID));
+        return allDocs;
+    }
+
+    public static void main(String[] args) {
+        System.out.println("=== PENGUJIAN BOOLEAN MODEL (DATASET AERODINAMIKA) ===\n");
+
+        // 1. INISIALISASI & LOAD INVERTED INDEX
+        // Pastikan Anda membuat objek InvertedIndex dan memuat dokumen doc_1.txt s/d
+        // doc_10.txt
+        InvertedIndex index = new InvertedIndex();
+        // Indexer.buildIndex(index); // <-- Asumsikan ini cara program Anda meload 10
+        // dokumen teks
+
+        // 2. DAPATKAN SEMUA DOKUMEN & POSTING LIST
+        ArrayList<InvertedIndex.Posting> allDocs = getAllDocuments(index);
+
+        // Gunakan fungsi helper getSortedPostings dan gunakan kata yang sudah di-stem!
+        ArrayList<InvertedIndex.Posting> flow = getSortedPostings(index, "flow");
+        ArrayList<InvertedIndex.Posting> boundary = getSortedPostings(index, "boundari"); // Porter Stemmer mengubah y
+                                                                                          // -> i
+        ArrayList<InvertedIndex.Posting> heat = getSortedPostings(index, "heat");
+        ArrayList<InvertedIndex.Posting> mach = getSortedPostings(index, "mach");
+
         // ====================================================================
 
         System.out.println("--- 1. TEST AND ---");
-        // Kueri: flow AND boundary
         ArrayList<InvertedIndex.Posting> resAnd = BooleanModel.andOpt(flow, boundary);
-        System.out.println("Kueri: flow AND boundary (Harapan: [2, 3, 4, 7, 9])");
-        printResult("Eksekusi", resAnd);
+        printResult("flow AND boundary", "[1, 2, 3, 4, 7, 9]", resAnd);
 
         // ====================================================================
 
         System.out.println("--- 2. TEST OR ---");
-        // Kueri: heat OR mach
         ArrayList<InvertedIndex.Posting> resOr = BooleanModel.orOpt(heat, mach);
-        System.out.println("Kueri: heat OR mach (Harapan: [5, 6, 7, 9, 10])");
-        printResult("Eksekusi", resOr);
+        printResult("heat OR mach", "[5, 6, 7, 9, 10]", resOr);
 
         // ====================================================================
 
         System.out.println("--- 3. TEST NOT (Unary) ---");
-        // Kueri: NOT heat
-        // Logika: allDocs - heat -> Buang 5 dan 6 dari 1-10
         ArrayList<InvertedIndex.Posting> resNot = BooleanModel.notOpt(allDocs, heat);
-        System.out.println("Kueri: NOT heat (Harapan: [1, 2, 3, 4, 7, 8, 9, 10])");
-        printResult("Eksekusi", resNot);
+        printResult("NOT heat", "[1, 2, 3, 4, 7, 8, 9, 10]", resNot);
 
         // ====================================================================
 
         System.out.println("--- 4. TEST AND NOT ---");
-        // Kueri: flow AND NOT boundary
-        // Logika Stack: NOT boundary -> [1, 5, 6, 10]
-        //               flow AND [1, 5, 6, 10] -> [6]
         ArrayList<InvertedIndex.Posting> tempNotBoundary = BooleanModel.notOpt(allDocs, boundary);
         ArrayList<InvertedIndex.Posting> resAndNot = BooleanModel.andOpt(flow, tempNotBoundary);
-        
-        System.out.println("Kueri: flow AND NOT boundary (Harapan: [6])");
-        printResult("Eksekusi", resAndNot);
+        printResult("flow AND NOT boundary", "[6]", resAndNot);
 
         // ====================================================================
 
-        System.out.println("--- 5. TEST OR NOT ---");
-        // Kueri: heat OR NOT flow
-        // Logika Stack: NOT flow -> [1, 5, 8, 10]
-        //               heat([5, 6]) OR [1, 5, 8, 10] -> [1, 5, 6, 8, 10]
-        ArrayList<InvertedIndex.Posting> tempNotFlow = BooleanModel.notOpt(allDocs, flow);
-        ArrayList<InvertedIndex.Posting> resOrNot = BooleanModel.orOpt(heat, tempNotFlow);
-        
-        System.out.println("Kueri: heat OR NOT flow (Harapan: [1, 5, 6, 8, 10])");
-        printResult("Eksekusi", resOrNot);
-
-        // ====================================================================
-
-        System.out.println("--- 6. TEST KURUNG () ---");
-        // Kueri: (heat OR mach) AND flow
-        // Logika Stack: heat OR mach -> [5, 6, 7, 9, 10]
-        //               [5, 6, 7, 9, 10] AND flow([2, 3, 4, 6, 7, 9]) -> [6, 7, 9]
+        System.out.println("--- 5. TEST KURUNG () ---");
         ArrayList<InvertedIndex.Posting> tempKurungOr = BooleanModel.orOpt(heat, mach);
         ArrayList<InvertedIndex.Posting> resKurung = BooleanModel.andOpt(tempKurungOr, flow);
-        
-        System.out.println("Kueri: (heat OR mach) AND flow (Harapan: [6, 7, 9])");
-        printResult("Eksekusi", resKurung);
+        printResult("(heat OR mach) AND flow", "[6, 7, 9]", resKurung);
 
         // ====================================================================
 
-        System.out.println("--- 7. TEST GABUNGAN KOMPLEKS ---");
-        // Kueri: (flow OR heat) AND NOT (boundary AND mach)
-        // Logika: 
-        // 1. flow OR heat -> [2, 3, 4, 5, 6, 7, 9]
-        // 2. boundary AND mach -> [7, 9]
-        // 3. NOT (Hasil 2) -> allDocs - [7, 9] -> [1, 2, 3, 4, 5, 6, 8, 10]
-        // 4. (Hasil 1) AND (Hasil 3) -> [2, 3, 4, 5, 6]
-        
+        System.out.println("--- 6. TEST GABUNGAN KOMPLEKS ---");
         ArrayList<InvertedIndex.Posting> step1 = BooleanModel.orOpt(flow, heat);
         ArrayList<InvertedIndex.Posting> step2 = BooleanModel.andOpt(boundary, mach);
-        ArrayList<InvertedIndex.Posting> step3 = BooleanModel.notOpt(allDocs, step2); // Unary NOT
+        ArrayList<InvertedIndex.Posting> step3 = BooleanModel.notOpt(allDocs, step2);
         ArrayList<InvertedIndex.Posting> finalRes = BooleanModel.andOpt(step1, step3);
-        
-        System.out.println("Kueri: (flow OR heat) AND NOT (boundary AND mach) (Harapan: [2, 3, 4, 5, 6])");
-        printResult("Eksekusi", finalRes);
+
+        printResult("(flow OR heat) AND NOT (boundary AND mach)", "[1, 2, 3, 4, 5, 6]", finalRes);
     }
 }

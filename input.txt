@@ -1,0 +1,8 @@
+flow boundary 
+flow AND boundary
+flow OR boundary
+NOT flow
+flow AND NOT boundary
+flow NOT boundary
+(boundary OR written) AND flow
+NOT flow (boundary OR written)

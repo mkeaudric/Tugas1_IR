@@ -157,6 +157,7 @@ public class QueryEvaluator {
         for (String token : postfix) {
             if (token.equals("AND") || token.equals("OR") || token.equals("NOT")) {
                 if (token.equals("NOT")) {
+                    // NOT adalah operator UNARY, hanya membutuhkan 1 operand (yang berada di stack)
                     // Hanya pop 1 kali untuk operand kanan
                     ArrayList<InvertedIndex.Posting> rightOperand = resultStack.isEmpty() ? new ArrayList<>() : resultStack.pop();
                     
